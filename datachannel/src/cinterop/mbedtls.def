@@ -1,0 +1,4 @@
+package = internal.mbedtls
+staticLibraries = libmbedtls.a libmbedx509.a libmbedcrypto.a
+compilerOpts = -DOPENSSL_NO_DEPRECATED -Iinclude
+linkerOpts.linux = -lpthread -ldl -lm

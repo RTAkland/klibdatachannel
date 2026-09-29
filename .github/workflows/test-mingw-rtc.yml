@@ -1,0 +1,45 @@
+name: Test MinGW Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  mingw-test:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Run mingwX64Test
+        run: ./gradlew datachannel:mingwX64Test --info --stacktrace
+        shell: bash
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mingwX64-test-reports
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+          if-no-files-found: ignore

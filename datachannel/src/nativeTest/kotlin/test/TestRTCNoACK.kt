@@ -47,7 +47,7 @@ class TestRTCNoACK {
 
     @Test
     fun testTurnRelayOnly() = runBlocking {
-        PeerConnectionFactory.init(RTCLogLevel.INFO)
+        PeerConnectionFactory.init(RTCLogLevel.WARNING)
         val scope = CoroutineScope(Dispatchers.Default)
         val config = rtcConfiguration {
             turn(testTurnHost, 80, testTurnUser, testTurnPass, RTCTransport.UDP)
@@ -87,6 +87,7 @@ class TestRTCNoACK {
         val gotAtA = CompletableDeferred<Unit>()
         val gotAtB = CompletableDeferred<Unit>()
         pcB.onDataChannel { dc ->
+            println(pcB.selectedConnectionMode())
             dc.onMessage { msg ->
                 if (msg is RTCDataChannelMessage.Text) {
                     println("[$label][B] recv text: ${msg.value}")

@@ -4,6 +4,7 @@ kotlin {
     linuxX64()
 
     explicitApi()
+    withSourcesJar()
 
     targets.withType<KotlinNativeTarget>().configureEach {
         compilations["main"].cinterops {

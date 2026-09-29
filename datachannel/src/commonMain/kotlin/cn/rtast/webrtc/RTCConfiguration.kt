@@ -4,7 +4,7 @@
  * Date: 2026-09-29
  */
 
-package cn.rtast.webrtc.configuration
+package cn.rtast.webrtc
 
 
 public data class RTCConfiguration(
@@ -31,37 +31,59 @@ public fun rtcConfiguration(block: RTCConfigurationBuilder.() -> Unit): RTCConfi
 public class RTCConfigurationBuilder {
     private val iceServers = mutableListOf<String>()
 
-    /** ICE transport policy. Default: [RTCIceTransportPolicy.ALL]. */
+    /**
+     * ICE transport policy. Default: [RTCIceTransportPolicy.ALL]
+     */
     public var iceTransportPolicy: RTCIceTransportPolicy = RTCIceTransportPolicy.ALL
 
-    /** Enable ICE over TCP candidates. Default: `false`. */
+    /**
+     * Enable ICE over TCP candidates. Default: `false`
+     */
     public var enableIceTcp: Boolean = false
 
-    /** Enable ICE UDP multiplexing. **libjuice only**. Default: `false`. */
+    /**
+     * Enable ICE UDP multiplexing. **libjuice only**. Default: `false`
+     */
     public var enableIceUdpMux: Boolean = false
 
-    /** Disable automatic negotiation; caller must call `createAnswer()` explicitly. Default: `false`. */
+    /**
+     * Disable automatic negotiation; caller must call `createAnswer()` explicitly. Default: `false`
+     */
     public var disableAutoNegotiation: Boolean = false
 
-    /** Local bind address, `null` = all interfaces. Default: `null`. */
+    /**
+     * Local bind address, `null` = all interfaces. Default: `null`
+     */
     public var bindAddress: String? = null
 
-    /** Proxy server URL. **libnice only**. Default: `null`. */
+    /**
+     * Proxy server URL. **libnice only**. Default: `null`
+     */
     public var proxyServer: String? = null
 
-    /** Start of the UDP port range, `0` = automatic. Default: `0`. */
+    /**
+     * Start of the UDP port range, `0` = automatic. Default: `0`
+     */
     public var portRangeBegin: Int = 0
 
-    /** End of the UDP port range, `0` = automatic. Default: `0`. */
+    /**
+     * End of the UDP port range, `0` = automatic. Default: `0`
+     */
     public var portRangeEnd: Int = 0
 
-    /** MTU in bytes, `0` = automatic. Default: `0`. */
+    /**
+     * MTU in bytes, `0` = automatic. Default: `0`
+     */
     public var mtu: Int = 0
 
-    /** Max incoming message size in bytes, `0` = default. Default: `0`. */
+    /**
+     * Max incoming message size in bytes, `0` = default. Default: `0`
+     */
     public var maxMessageSize: Int = 0
 
-    /** DTLS certificate type. Default: [RTCCertificateType.DEFAULT]. */
+    /**
+     * DTLS certificate type. Default: [RTCCertificateType.DEFAULT]
+     */
     public var certificateType: RTCCertificateType = RTCCertificateType.DEFAULT
 
     /**

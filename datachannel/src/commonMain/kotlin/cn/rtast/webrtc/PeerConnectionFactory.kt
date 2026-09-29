@@ -9,9 +9,6 @@
 
 package cn.rtast.webrtc
 
-import cn.rtast.webrtc.configuration.RTCConfiguration
-import cn.rtast.webrtc.configuration.RTCConfigurationBuilder
-import cn.rtast.webrtc.configuration.rtcConfiguration
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import libdatachannel.rtcCleanup

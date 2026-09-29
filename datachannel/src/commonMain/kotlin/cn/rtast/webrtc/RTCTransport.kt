@@ -5,7 +5,7 @@
  */
 
 
-package cn.rtast.webrtc.configuration
+package cn.rtast.webrtc
 
 /**
  * Transport protocol used to communicate with a TURN server

@@ -5,7 +5,7 @@
  */
 
 
-package cn.rtast.webrtc.configuration
+package cn.rtast.webrtc
 
 /**
  * ICE transport policy that controls which candidate

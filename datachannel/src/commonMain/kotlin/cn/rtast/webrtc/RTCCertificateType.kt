@@ -5,12 +5,12 @@
  */
 
 
-package cn.rtast.webrtc.configuration
+package cn.rtast.webrtc
 
 /**
  * Type of certificate used to secure the DTLS handshake
  * libdatachannel generates a self-signed certificate for each
- * [cn.rtast.webrtc.RTCPeerConnection] and uses it to establish the DTLS session
+ * [RTCPeerConnection] and uses it to establish the DTLS session
  *
  * @property value The unsigned int value passed to the native libdatachannel API
  */

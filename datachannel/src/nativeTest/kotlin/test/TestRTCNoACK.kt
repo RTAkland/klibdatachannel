@@ -7,13 +7,7 @@
 
 package test
 
-import cn.rtast.webrtc.PeerConnectionFactory
-import cn.rtast.webrtc.RTCDataChannelMessage
-import cn.rtast.webrtc.RTCLogLevel
-import cn.rtast.webrtc.configuration.RTCConfiguration
-import cn.rtast.webrtc.configuration.RTCIceTransportPolicy
-import cn.rtast.webrtc.configuration.RTCTransport
-import cn.rtast.webrtc.configuration.rtcConfiguration
+import cn.rtast.webrtc.*
 import kotlinx.coroutines.*
 import kotlin.test.Test
 import kotlin.time.Duration.Companion.milliseconds
@@ -107,7 +101,7 @@ class TestRTCNoACK {
             }
         }
 
-        val dcA = pcA.createDataChannel("chat")
+        val dcA = pcA.createDataChannel("chat", reliability = RTCDataChannelReliability.Reliable)
         dcA.onMessage { msg ->
             if (msg is RTCDataChannelMessage.Text) {
                 println("[$label][A] recv text: ${msg.value}")

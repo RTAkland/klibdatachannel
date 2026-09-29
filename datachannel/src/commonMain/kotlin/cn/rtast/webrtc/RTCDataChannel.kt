@@ -8,6 +8,8 @@
 
 package cn.rtast.webrtc
 
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import kotlinx.cinterop.*
 import libdatachannel.*
 import kotlin.concurrent.Volatile
@@ -17,21 +19,27 @@ public class RTCDataChannel internal constructor(
     public val label: String,
     private val peer: RTCPeerConnection,
 ) {
+    private val lock = SynchronizedObject()
+
     private var onOpen: (() -> Unit)? = null
         set(value) {
-            field = value
-            if (value != null && openedPending) {
-                openedPending = false
-                value.invoke()
+            synchronized(lock) {
+                field = value
+                if (value != null && openedPending) {
+                    openedPending = false
+                    value.invoke()
+                }
             }
         }
 
     private var onClose: (() -> Unit)? = null
         set(value) {
-            field = value
-            if (value != null && closedPending) {
-                closedPending = false
-                value.invoke()
+            synchronized(lock) {
+                field = value
+                if (value != null && closedPending) {
+                    closedPending = false
+                    value.invoke()
+                }
             }
         }
 
@@ -56,6 +64,9 @@ public class RTCDataChannel internal constructor(
         if (rtcIsOpen(dc)) openedPending = true
         if (rtcIsClosed(dc)) closedPending = true
     }
+
+    public val isOpen: Boolean get() = !closed && rtcIsOpen(dc)
+    public val isClosed: Boolean get() = closed || rtcIsClosed(dc)
 
     public fun onMessage(block: (RTCDataChannelMessage) -> Unit) {
         this.onMessage = block
@@ -83,9 +94,6 @@ public class RTCDataChannel internal constructor(
         if (closed) return
         closed = true
         rtcClose(dc)
-        rtcDelete(dc)
-        selfRef.dispose()
-        peer.removeChannel(dc)
     }
 
     public companion object {
@@ -99,10 +107,15 @@ public class RTCDataChannel internal constructor(
 
         private val closeCb = staticCFunction<Int, COpaquePointer?, Unit> { _, user ->
             val self = user?.asStableRef<RTCDataChannel>()?.get() ?: return@staticCFunction
+            if (self.closed) return@staticCFunction
+            self.closed = true
             val cb = self.onClose
             if (cb != null) {
                 cb.invoke()
             } else self.closedPending = true
+            rtcDelete(self.dc)
+            self.peer.removeChannel(self.dc)
+            self.selfRef.dispose()
         }
 
         private val msgCb = staticCFunction<Int, CPointer<ByteVar>?, Int, COpaquePointer?, Unit> { _, msg, size, user ->

@@ -39,7 +39,8 @@ public class RTCPeerConnection internal constructor(scope: CoroutineScope, iceCo
     @Volatile
     private var answerSent = false
     private val pendingCandidates = mutableListOf<Pair<String, String>>()
-    private var lastLocalDescriptionType: String? = null
+    private var lastLocalDescription: Pair<String, String>? = null
+    private val seenCandidates = mutableSetOf<Pair<String, String>>()
 
     init {
         pc = createPeerConnection(iceConfig)
@@ -53,6 +54,8 @@ public class RTCPeerConnection internal constructor(scope: CoroutineScope, iceCo
         rtcSetDataChannelCallback(pc, dataChannelCb)
         scope.launch { for (e in events) dispatch(e) }
     }
+
+    public val isClosed: Boolean get() = pc < 0
 
     public fun onLocalDescription(block: (String, String) -> Unit) {
         this.onLocalDescription = block
@@ -95,24 +98,25 @@ public class RTCPeerConnection internal constructor(scope: CoroutineScope, iceCo
     }
 
     public fun createOffer() {
-        check(pc >= 0) { "PeerConnection closed" }
+        if (pc < 0) return
         if (offerSent) return
         offerSent = true
+        seenCandidates.clear()
         rtcSetLocalDescription(pc, "offer")
     }
 
     public fun createAnswer() {
-        check(pc >= 0) { "PeerConnection closed" }
+        if (pc < 0) return
         if (answerSent) return
         answerSent = true
         rtcSetLocalDescription(pc, "answer")
     }
 
     public fun setRemoteDescription(sdp: String, type: String) {
-        check(pc >= 0) { "PeerConnection closed" }
+        if (pc < 0) return
         val r = memScoped { rtcSetRemoteDescription(pc, sdp.cstr.ptr, type.cstr.ptr) }
         if (r < 0) {
-            println("[pc] setRemoteDescription failed: $r")
+            platform.posix.fprintf(platform.posix.stderr, "[pc] setRemoteDescription failed: %d\n", r)
             return
         }
         remoteDescriptionSet = true
@@ -120,7 +124,7 @@ public class RTCPeerConnection internal constructor(scope: CoroutineScope, iceCo
     }
 
     public fun addRemoteCandidate(candidate: String, mid: String) {
-        check(pc >= 0) { "PeerConnection closed" }
+        if (pc < 0) return
         if (!remoteDescriptionSet) {
             pendingCandidates += candidate to mid
             return
@@ -149,18 +153,17 @@ public class RTCPeerConnection internal constructor(scope: CoroutineScope, iceCo
     }
 
     public fun close() {
+        if (pc < 0) return
         channels.values.toList().forEach { it.close() }
-        channels.clear()
         pendingCandidates.clear()
+        seenCandidates.clear()
         remoteDescriptionSet = false
         offerSent = false
         answerSent = false
-        lastLocalDescriptionType = null
-        if (pc >= 0) {
-            rtcClosePeerConnection(pc)
-            rtcDeletePeerConnection(pc)
-            pc = -1
-        }
+        lastLocalDescription = null
+        rtcClosePeerConnection(pc)
+        rtcDeletePeerConnection(pc)
+        pc = -1
         selfRef?.dispose()
         selfRef = null
         events.close()
@@ -173,12 +176,18 @@ public class RTCPeerConnection internal constructor(scope: CoroutineScope, iceCo
     private fun dispatch(event: RTCPeerEvent) {
         when (event) {
             is RTCPeerEvent.LocalDescription -> {
-                if (lastLocalDescriptionType == event.type) return
-                lastLocalDescriptionType = event.type
+                val key = event.type to event.sdp
+                if (lastLocalDescription == key) return
+                lastLocalDescription = key
                 onLocalDescription?.invoke(event.sdp, event.type)
             }
 
-            is RTCPeerEvent.LocalCandidate -> onLocalCandidate?.invoke(event.candidate, event.mid)
+            is RTCPeerEvent.LocalCandidate -> {
+                val key = event.candidate to event.mid
+                if (!seenCandidates.add(key)) return
+                onLocalCandidate?.invoke(event.candidate, event.mid)
+            }
+
             is RTCPeerEvent.State -> onStateChange?.invoke(event.state)
             is RTCPeerEvent.IncomingChannel -> onDataChannel?.invoke(event.channel)
         }
@@ -222,4 +231,3 @@ public class RTCPeerConnection internal constructor(scope: CoroutineScope, iceCo
             }
     }
 }
-

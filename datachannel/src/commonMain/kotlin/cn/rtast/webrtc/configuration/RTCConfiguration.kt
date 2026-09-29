@@ -40,8 +40,8 @@ public class RTCConfigurationBuilder {
     /** Enable ICE UDP multiplexing. **libjuice only**. Default: `false`. */
     public var enableIceUdpMux: Boolean = false
 
-    /** Disable automatic negotiation; caller must call `createAnswer()` explicitly. Default: `true`. */
-    public var disableAutoNegotiation: Boolean = true
+    /** Disable automatic negotiation; caller must call `createAnswer()` explicitly. Default: `false`. */
+    public var disableAutoNegotiation: Boolean = false
 
     /** Local bind address, `null` = all interfaces. Default: `null`. */
     public var bindAddress: String? = null
@@ -120,9 +120,8 @@ public class RTCConfigurationBuilder {
             for (b in s.encodeToByteArray()) {
                 val v = b.toInt() and 0xFF
                 val c = v.toChar()
-                if (c.isLetterOrDigit() || c in "-_.~") {
-                    sb.append(c)
-                } else {
+                if ((c in 'a'..'z') || (c in 'A'..'Z') || (c in '0'..'9') || c in "-_.~") sb.append(c)
+                else {
                     sb.append('%')
                     sb.append(HEX[v shr 4])
                     sb.append(HEX[v and 0x0F])

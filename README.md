@@ -1,7 +1,7 @@
 # klibdatachannel
 
 A Kotlin native [libdatachannel](https://github.com/paullouisageneau/libdatachannel) wrapper,
-only datachannel, supports `linuxX64` `mingwX64`
+only datachannel, supports `linuxX64`
 
 # Example
 

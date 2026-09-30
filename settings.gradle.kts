@@ -1,3 +1,3 @@
-rootProject.name = "libdatachannel"
+rootProject.name = "kotlin-webrtc"
 
 include(":datachannel")

@@ -1,4 +1,4 @@
-# klibdatachannel
+# kotlin-webrtc
 
 A Kotlin native [libdatachannel](https://github.com/paullouisageneau/libdatachannel) wrapper,
 only datachannel, supports `linuxX64`
@@ -27,4 +27,4 @@ kotlin {
 
 # Open Source
 
-klibdatachannel open source under [Apache-2.0](LICENSE)
+kotlin-webrtc open source under [Apache-2.0](LICENSE)

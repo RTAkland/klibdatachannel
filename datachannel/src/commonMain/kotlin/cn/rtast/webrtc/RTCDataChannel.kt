@@ -17,6 +17,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import libdatachannel.*
+import platform.posix.fprintf
+import platform.posix.stderr
 import kotlin.concurrent.Volatile
 
 public class RTCDataChannel internal constructor(
@@ -68,6 +70,7 @@ public class RTCDataChannel internal constructor(
         rtcSetClosedCallback(dc, closeCallback)
         rtcSetMessageCallback(dc, messageCallback)
         rtcSetBufferedAmountLowCallback(dc, bufferedAmountLowCallback)
+        rtcSetErrorCallback(dc, errorCallback)
 
         _state.value = when {
             rtcIsClosed(dc) -> RTCDataChannelState.Closed
@@ -122,11 +125,31 @@ public class RTCDataChannel internal constructor(
                         _bufferedAmountLow.emit(Unit)
                         _bufferedAmount.value = rtcGetBufferedAmount(dc).toLong()
                     }
+
+                    is NativeDatachannelEvent.Error -> {
+                        handleError(event.message)
+                    }
                 }
             }
         } finally {
             if (!cleanedUp) doCleanup()
         }
+    }
+
+    private fun handleError(message: String) {
+        if (isClosed || _state.value == RTCDataChannelState.Closed) {
+            reportError(message, fatal = false)
+            return
+        }
+        reportError(message, fatal = true)
+        _state.value = RTCDataChannelState.Closing
+        rtcClose(dc)
+    }
+
+    private fun reportError(message: String, fatal: Boolean) {
+        val handler = RTCPeerConnectionFactory.errorHandler
+        if (handler != null) handler(RTCException(message, fatal))
+        else fprintf(stderr, "[kotlin-webrtc] datachannel error: %s\n", message)
     }
 
     private fun doCleanup() {
@@ -173,13 +196,14 @@ public class RTCDataChannel internal constructor(
         public val bytes: SharedFlow<ByteArray> = _binaryMessages.asSharedFlow()
     }
 
-    private interface NativeDatachannelEvent {
+    private sealed interface NativeDatachannelEvent {
         object Open : NativeDatachannelEvent
         object Closing : NativeDatachannelEvent
         object Closed : NativeDatachannelEvent
         value class TextMessage(val text: String) : NativeDatachannelEvent
         value class BinaryMessage(val data: ByteArray) : NativeDatachannelEvent
         object BufferedLow : NativeDatachannelEvent
+        value class Error(val message: String) : NativeDatachannelEvent
     }
 
     public companion object {
@@ -207,6 +231,14 @@ public class RTCDataChannel internal constructor(
             staticCFunction<Int, COpaquePointer?, Unit> { _, user ->
                 val self = user?.asStableRef<RTCDataChannel>()?.get() ?: return@staticCFunction
                 self.nativeEvents.trySend(NativeDatachannelEvent.BufferedLow)
+            }
+
+        private val errorCallback =
+            staticCFunction<Int, CPointer<ByteVar>?, COpaquePointer?, Unit> { _, error, user ->
+                val self = user?.asStableRef<RTCDataChannel>()?.get() ?: return@staticCFunction
+                self.nativeEvents.trySend(
+                    NativeDatachannelEvent.Error(error?.toKString() ?: "unknown error")
+                )
             }
     }
 }

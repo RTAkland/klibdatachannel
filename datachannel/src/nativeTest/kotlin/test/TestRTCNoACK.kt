@@ -26,6 +26,9 @@ class TestRTCNoACK {
     @Test
     fun testStunOnly() = runBlocking {
         RTCPeerConnectionFactory.init(RTCLogLevel.ERROR)
+        RTCPeerConnectionFactory.onError {
+            println(it)
+        }
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         val config = rtcConfiguration {
             stun(publicStun)

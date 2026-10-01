@@ -21,6 +21,7 @@ import libdatachannel.rtcPreload
 
 public object RTCPeerConnectionFactory {
     private var initialized = false
+    internal var errorHandler: ((RTCException) -> Unit)? = null
 
     public fun init(logLevel: RTCLogLevel = RTCLogLevel.ERROR) {
         if (initialized) return
@@ -47,4 +48,8 @@ public object RTCPeerConnectionFactory {
         scope: CoroutineScope,
         config: RTCConfigurationBuilder.() -> Unit,
     ): RTCPeerConnection = createPeerConnection(scope, rtcConfiguration(config))
+
+    public fun onError(handler: (RTCException) -> Unit) {
+        errorHandler = handler
+    }
 }

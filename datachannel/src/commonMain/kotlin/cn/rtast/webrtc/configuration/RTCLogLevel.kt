@@ -7,7 +7,7 @@
 
 @file:OptIn(ExperimentalForeignApi::class)
 
-package cn.rtast.webrtc
+package cn.rtast.webrtc.configuration
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import libdatachannel.*

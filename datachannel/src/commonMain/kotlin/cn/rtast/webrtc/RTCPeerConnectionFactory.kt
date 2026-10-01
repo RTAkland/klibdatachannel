@@ -9,13 +9,17 @@
 
 package cn.rtast.webrtc
 
+import cn.rtast.webrtc.configuration.RTCConfiguration
+import cn.rtast.webrtc.configuration.RTCConfigurationBuilder
+import cn.rtast.webrtc.configuration.RTCLogLevel
+import cn.rtast.webrtc.configuration.rtcConfiguration
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import libdatachannel.rtcCleanup
 import libdatachannel.rtcInitLogger
 import libdatachannel.rtcPreload
 
-public object PeerConnectionFactory {
+public object RTCPeerConnectionFactory {
     private var initialized = false
 
     public fun init(logLevel: RTCLogLevel = RTCLogLevel.WARNING) {

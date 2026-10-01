@@ -4,7 +4,7 @@
  * Date: 2026-09-29
  */
 
-package cn.rtast.webrtc
+package cn.rtast.webrtc.configuration
 
 
 public data class RTCConfiguration(

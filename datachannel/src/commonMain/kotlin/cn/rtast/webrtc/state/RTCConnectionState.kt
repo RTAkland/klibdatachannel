@@ -5,7 +5,7 @@
  */
 
 
-package cn.rtast.webrtc
+package cn.rtast.webrtc.state
 
 public enum class RTCConnectionState(public val value: Int) {
     NEW(0),

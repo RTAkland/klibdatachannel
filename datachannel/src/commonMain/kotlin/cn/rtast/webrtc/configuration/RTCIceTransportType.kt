@@ -5,11 +5,11 @@
  */
 
 
-package cn.rtast.webrtc
+package cn.rtast.webrtc.configuration
 
-public enum class RTCConnectionMode {
-    DIRECT,
-    P2P_STUN,
+public enum class RTCIceTransportType {
+    HOST,
+    SRFLX,
     RELAY,
     UNKNOWN
 }

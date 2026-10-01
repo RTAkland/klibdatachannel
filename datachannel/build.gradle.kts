@@ -1,5 +1,9 @@
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
+repositories {
+    mavenLocal()
+}
+
 kotlin {
     linuxX64()
 
@@ -41,11 +45,8 @@ kotlin {
             api(libs.coroutines)
         }
 
-        nativeMain.dependencies {
-        }
-
         commonTest.dependencies {
-
+            implementation("cn.rtast.webrtc.signaling:signal-client:1.0-SNAPSHOT")
         }
     }
 }

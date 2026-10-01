@@ -22,7 +22,7 @@ import libdatachannel.rtcPreload
 public object RTCPeerConnectionFactory {
     private var initialized = false
 
-    public fun init(logLevel: RTCLogLevel = RTCLogLevel.WARNING) {
+    public fun init(logLevel: RTCLogLevel = RTCLogLevel.ERROR) {
         if (initialized) return
         rtcInitLogger(logLevel.logLevel, null)
         rtcPreload()
@@ -35,20 +35,16 @@ public object RTCPeerConnectionFactory {
         initialized = false
     }
 
-    public fun createPeerConnection(scope: CoroutineScope): RTCPeerConnection {
-        check(initialized) { "Call WebRTC.init() first" }
-        return RTCPeerConnection(scope)
-    }
-
     public fun createPeerConnection(scope: CoroutineScope, config: RTCConfiguration): RTCPeerConnection {
         check(initialized) { "Call WebRTC.init() first" }
         return RTCPeerConnection(scope, config)
     }
 
+    public fun createPeerConnection(scope: CoroutineScope): RTCPeerConnection =
+        createPeerConnection(scope, rtcConfiguration {})
+
     public fun createPeerConnection(
         scope: CoroutineScope,
         config: RTCConfigurationBuilder.() -> Unit,
-    ): RTCPeerConnection {
-        return createPeerConnection(scope, rtcConfiguration(config))
-    }
+    ): RTCPeerConnection = createPeerConnection(scope, rtcConfiguration(config))
 }

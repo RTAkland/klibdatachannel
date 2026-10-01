@@ -7,4 +7,4 @@
 
 package cn.rtast.webrtc
 
-public data class RTCSessionDescription(val type: String, val sdp: String)
+public data class RTCSelectedCandidate(val local: String, val remote: String)

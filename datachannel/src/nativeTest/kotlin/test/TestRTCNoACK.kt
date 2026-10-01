@@ -6,14 +6,8 @@
 
 package test
 
-import cn.rtast.webrtc.RTCDataChannelMessage
-import cn.rtast.webrtc.configuration.RTCLogLevel
 import cn.rtast.webrtc.RTCPeerConnectionFactory
-import cn.rtast.webrtc.configuration.RTCTransport
-import cn.rtast.webrtc.configuration.RTCConfiguration
-import cn.rtast.webrtc.configuration.RTCIceTransportPolicy
-import cn.rtast.webrtc.configuration.rtcConfiguration
-import cn.rtast.webrtc.configuration.rtcDataChannelConfig
+import cn.rtast.webrtc.configuration.*
 import cn.rtast.webrtc.state.RTCDataChannelState
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filter
@@ -113,11 +107,9 @@ class TestRTCNoACK {
                 "[$label][B] incoming channel: ${dc.label}, " +
                         "mode = ${pcB.selectedConnectionMode()}"
             )
-            dc.messages.onEach { msg ->
-                if (msg is RTCDataChannelMessage.Text) {
-                    println("[$label][B] recv text: ${msg.value}")
-                    gotAtB.complete(Unit)
-                }
+            dc.messages.text.onEach { msg ->
+                println("[$label][B] recv text: $msg")
+                gotAtB.complete(Unit)
             }.launchIn(scope)
 
             dc.state.filter { it == RTCDataChannelState.Open }
@@ -131,19 +123,17 @@ class TestRTCNoACK {
             ordered = true
         })
 
-        dcA.messages
-            .onEach { msg ->
-                if (msg is RTCDataChannelMessage.Text) {
-                    println("[$label][A] recv text: ${msg.value}")
-                    gotAtA.complete(Unit)
-                }
-            }.launchIn(scope)
+        dcA.messages.text.onEach { msg ->
+            println("[$label][A] recv text: $msg")
+            gotAtA.complete(Unit)
+        }.launchIn(scope)
 
         dcA.state
             .filter { it == RTCDataChannelState.Open }
             .onEach {
                 delay(500.milliseconds)
                 dcA.send("hello from A")
+                dcA.async.send("")
             }.launchIn(scope)
 
         println("[$label] A creating offer")

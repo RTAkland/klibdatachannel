@@ -32,12 +32,11 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
     private var pc: Int = -1
     private var selfRef: StableRef<RTCPeerConnection>? = null
 
-    private val nativeEvents = Channel<NativePeerEvent>(Channel.UNLIMITED)
+    private val nativeEvents = Channel<NativePeerConnectionEvent>(Channel.UNLIMITED)
 
     internal val pcScope = CoroutineScope(
         parentScope.coroutineContext +
-                SupervisorJob(parentScope.coroutineContext[Job]) +
-                Dispatchers.Default
+                SupervisorJob(parentScope.coroutineContext[Job])
     )
 
     private val channelsLock = SynchronizedObject()
@@ -52,8 +51,8 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
     private val _gatheringState = MutableStateFlow(RTCGatheringState.NEW)
     public val gatheringState: StateFlow<RTCGatheringState> = _gatheringState.asStateFlow()
 
-    private val _selectedCandidatePair = MutableStateFlow<RTCCandidatePair?>(null)
-    public val selectedCandidatePair: StateFlow<RTCCandidatePair?> = _selectedCandidatePair.asStateFlow()
+    private val _selectedCandidatePair = MutableStateFlow<RTCSelectedCandidate?>(null)
+    public val selectedCandidatePair: StateFlow<RTCSelectedCandidate?> = _selectedCandidatePair.asStateFlow()
 
     private val _localDescriptions = MutableSharedFlow<RTCSessionDescription>(1, 4, BufferOverflow.DROP_OLDEST)
     public val localDescriptions: SharedFlow<RTCSessionDescription> = _localDescriptions.asSharedFlow()
@@ -76,62 +75,38 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
     private var lastLocalDescription: RTCSessionDescription? = null
     private val seenCandidates = mutableSetOf<Pair<String, String>>()
 
-    public val localDescription: String
+    public val localSessionDescription: RTCSessionDescription?
         get() {
-            if (pc < 0) return ""
-            return memScoped {
+            if (pc < 0) return null
+            val type = memScoped {
+                val bufSize = 64
+                val buf = allocArray<ByteVar>(bufSize)
+                val r = rtcGetLocalDescriptionType(pc, buf, bufSize)
+                if (r < 0) null else buf.toKString()
+            } ?: return null
+            val sdp = memScoped {
                 val bufSize = 8192
                 val buf = allocArray<ByteVar>(bufSize)
                 val r = rtcGetLocalDescription(pc, buf, bufSize)
                 if (r < 0) "" else buf.toKString()
             }
-        }
-
-    public val localDescriptionType: String?
-        get() {
-            if (pc < 0) return null
-            return memScoped {
-                val bufSize = 64
-                val buf = allocArray<ByteVar>(bufSize)
-                val r = rtcGetLocalDescriptionType(pc, buf, bufSize)
-                if (r < 0) null else buf.toKString()
-            }
-        }
-
-    public val remoteDescription: String
-        get() {
-            if (pc < 0) return ""
-            return memScoped {
-                val bufSize = 8192
-                val buf = allocArray<ByteVar>(bufSize)
-                val r = rtcGetRemoteDescription(pc, buf, bufSize)
-                if (r < 0) "" else buf.toKString()
-            }
-        }
-
-    public val remoteDescriptionType: String?
-        get() {
-            if (pc < 0) return null
-            return memScoped {
-                val bufSize = 64
-                val buf = allocArray<ByteVar>(bufSize)
-                val r = rtcGetRemoteDescriptionType(pc, buf, bufSize)
-                if (r < 0) null else buf.toKString()
-            }
-        }
-
-    public val localSessionDescription: RTCSessionDescription?
-        get() {
-            val type = localDescriptionType ?: return null
-            val sdp = localDescription
             if (sdp.isEmpty()) return null
             return RTCSessionDescription(type, sdp)
         }
 
     public val remoteSessionDescription: RTCSessionDescription?
         get() {
-            val type = remoteDescriptionType ?: return null
-            val sdp = remoteDescription
+            if (pc < 0) return null
+            val type = memScoped {
+                val bufSize = 64
+                val buf = allocArray<ByteVar>(bufSize)
+                if (rtcGetRemoteDescriptionType(pc, buf, bufSize) < 0) null else buf.toKString()
+            } ?: return null
+            val sdp = memScoped {
+                val bufSize = 8192
+                val buf = allocArray<ByteVar>(bufSize)
+                if (rtcGetRemoteDescription(pc, buf, bufSize) < 0) "" else buf.toKString()
+            }
             if (sdp.isEmpty()) return null
             return RTCSessionDescription(type, sdp)
         }
@@ -152,14 +127,14 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
 
     public val isClosed: Boolean get() = pc < 0
 
-    public fun querySelectedCandidatePair(): RTCCandidatePair? {
+    private fun querySelectedCandidatePair(): RTCSelectedCandidate? {
         if (pc < 0) return null
         return memScoped {
             val bufSize = 512
             val local = allocArray<ByteVar>(bufSize)
             val remote = allocArray<ByteVar>(bufSize)
             val r = rtcGetSelectedCandidatePair(pc, local, bufSize, remote, bufSize)
-            if (r <= 0) null else RTCCandidatePair(local.toKString(), remote.toKString())
+            if (r <= 0) null else RTCSelectedCandidate(local.toKString(), remote.toKString())
         }
     }
 
@@ -317,32 +292,41 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
     private suspend fun consumeNativeEvents() {
         for (e in nativeEvents) {
             when (e) {
-                is NativePeerEvent.LocalDescription -> {
+                is NativePeerConnectionEvent.LocalDescription -> {
                     val sd = RTCSessionDescription(e.type, e.sdp)
                     if (lastLocalDescription == sd) continue
                     lastLocalDescription = sd
                     _localDescriptions.emit(sd)
                 }
 
-                is NativePeerEvent.LocalCandidate -> {
+                is NativePeerConnectionEvent.LocalCandidate -> {
                     val key = e.candidate to e.mid
                     if (!seenCandidates.add(key)) continue
                     _localCandidates.emit(RTCCandidate(e.candidate, e.mid))
                     querySelectedCandidatePair()?.let { _selectedCandidatePair.value = it }
                 }
 
-                is NativePeerEvent.ConnectionState -> {
+                is NativePeerConnectionEvent.ConnectionState -> {
                     _connectionState.value = e.state
                     if (e.state == RTCConnectionState.CONNECTED ||
                         e.state == RTCConnectionState.DISCONNECTED
                     ) querySelectedCandidatePair()?.let { _selectedCandidatePair.value = it }
                 }
 
-                is NativePeerEvent.IceState -> _iceState.value = e.state
-                is NativePeerEvent.GatheringState -> _gatheringState.value = e.state
-                is NativePeerEvent.IncomingChannel -> _incomingDataChannels.emit(e.channel)
+                is NativePeerConnectionEvent.IceState -> _iceState.value = e.state
+                is NativePeerConnectionEvent.GatheringState -> _gatheringState.value = e.state
+                is NativePeerConnectionEvent.IncomingChannel -> _incomingDataChannels.emit(e.channel)
             }
         }
+    }
+
+    private sealed interface NativePeerConnectionEvent {
+        class LocalDescription(val sdp: String, val type: String) : NativePeerConnectionEvent
+        class LocalCandidate(val candidate: String, val mid: String) : NativePeerConnectionEvent
+        class ConnectionState(val state: RTCConnectionState) : NativePeerConnectionEvent
+        class IceState(val state: RTCIceState) : NativePeerConnectionEvent
+        class GatheringState(val state: RTCGatheringState) : NativePeerConnectionEvent
+        class IncomingChannel(val channel: RTCDataChannel) : NativePeerConnectionEvent
     }
 
     public companion object {
@@ -350,7 +334,7 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
             staticCFunction<Int, CPointer<ByteVar>?, CPointer<ByteVar>?, COpaquePointer?, Unit> { _, sdp, type, user ->
                 val self = user?.asStableRef<RTCPeerConnection>()?.get() ?: return@staticCFunction
                 self.nativeEvents.trySend(
-                    NativePeerEvent.LocalDescription(
+                    NativePeerConnectionEvent.LocalDescription(
                         sdp = sdp?.toKString() ?: "",
                         type = type?.toKString() ?: "",
                     )
@@ -361,7 +345,7 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
             staticCFunction<Int, CPointer<ByteVar>?, CPointer<ByteVar>?, COpaquePointer?, Unit> { _, candidate, mid, user ->
                 val self = user?.asStableRef<RTCPeerConnection>()?.get() ?: return@staticCFunction
                 self.nativeEvents.trySend(
-                    NativePeerEvent.LocalCandidate(
+                    NativePeerConnectionEvent.LocalCandidate(
                         candidate = candidate?.toKString() ?: "",
                         mid = mid?.toKString() ?: "",
                     )
@@ -372,7 +356,7 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
             staticCFunction<Int, rtcState, COpaquePointer?, Unit> { _, state, user ->
                 val self = user?.asStableRef<RTCPeerConnection>()?.get() ?: return@staticCFunction
                 self.nativeEvents.trySend(
-                    NativePeerEvent.ConnectionState(RTCConnectionState.from(state.toInt()))
+                    NativePeerConnectionEvent.ConnectionState(RTCConnectionState.from(state.toInt()))
                 )
             }
 
@@ -380,7 +364,7 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
             staticCFunction<Int, rtcIceState, COpaquePointer?, Unit> { _, state, user ->
                 val self = user?.asStableRef<RTCPeerConnection>()?.get() ?: return@staticCFunction
                 self.nativeEvents.trySend(
-                    NativePeerEvent.IceState(RTCIceState.from(state.toInt()))
+                    NativePeerConnectionEvent.IceState(RTCIceState.from(state.toInt()))
                 )
             }
 
@@ -388,7 +372,7 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
             staticCFunction<Int, rtcGatheringState, COpaquePointer?, Unit> { _, state, user ->
                 val self = user?.asStableRef<RTCPeerConnection>()?.get() ?: return@staticCFunction
                 self.nativeEvents.trySend(
-                    NativePeerEvent.GatheringState(RTCGatheringState.from(state.toInt()))
+                    NativePeerConnectionEvent.GatheringState(RTCGatheringState.from(state.toInt()))
                 )
             }
 
@@ -402,16 +386,7 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
                 }
                 val ch = RTCDataChannel(dcId, label, self, self.pcScope)
                 self.putChannel(dcId, ch)
-                self.nativeEvents.trySend(NativePeerEvent.IncomingChannel(ch))
+                self.nativeEvents.trySend(NativePeerConnectionEvent.IncomingChannel(ch))
             }
     }
-}
-
-private sealed interface NativePeerEvent {
-    data class LocalDescription(val sdp: String, val type: String) : NativePeerEvent
-    data class LocalCandidate(val candidate: String, val mid: String) : NativePeerEvent
-    data class ConnectionState(val state: RTCConnectionState) : NativePeerEvent
-    data class IceState(val state: RTCIceState) : NativePeerEvent
-    data class GatheringState(val state: RTCGatheringState) : NativePeerEvent
-    data class IncomingChannel(val channel: RTCDataChannel) : NativePeerEvent
 }

@@ -23,21 +23,6 @@ kotlin {
                 extraOpts("-libraryPath", file("src/cinterop/libs/${this@configureEach.name}").absolutePath)
             }
         }
-        binaries {
-            executable {
-                all {
-                    linkerOpts.addAll(
-                        listOf(
-                            "-L/usr/lib/x86_64-linux-gnu",
-                            "-lstdc++",
-                            "--allow-shlib-undefined",
-                            "--unresolved-symbols=ignore-all",
-                            "--warn-unresolved-symbols",
-                        )
-                    )
-                }
-            }
-        }
     }
 
     sourceSets {
@@ -46,7 +31,6 @@ kotlin {
         }
 
         commonTest.dependencies {
-            implementation("cn.rtast.webrtc.signaling:signal-client:1.0-SNAPSHOT")
         }
     }
 }

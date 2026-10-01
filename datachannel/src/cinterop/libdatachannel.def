@@ -1,4 +1,4 @@
 package = libdatachannel
 headers = rtc/rtc.h
 staticLibraries = libdatachannel.a libjuice.a libusrsctp.a
-linkerOpts.linux = -lpthread -ldl -lm -lstdc++
+linkerOpts.linux = -lpthread -ldl -lm -lstdc++ --warn-unresolved-symbols

@@ -30,7 +30,7 @@ subprojects {
         }
         publications.withType<MavenPublication> {
             pom {
-                name = "kotlin-webrtc"
+                name = "webrtc-kotlin"
                 description = "Kotlin Native WebRTC libdatachannel wrapper"
                 licenses {
                     license {

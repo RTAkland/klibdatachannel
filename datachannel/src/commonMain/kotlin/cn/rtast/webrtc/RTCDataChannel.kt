@@ -11,13 +11,13 @@ package cn.rtast.webrtc
 import cn.rtast.webrtc.state.RTCDataChannelState
 import kotlinx.cinterop.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import libdatachannel.*
 import platform.posix.fprintf
+import platform.posix.memcpy
 import platform.posix.stderr
 import kotlin.concurrent.Volatile
 
@@ -28,7 +28,6 @@ public class RTCDataChannel internal constructor(
     private val scope: CoroutineScope,
 ) {
     private val nativeEvents = Channel<NativeDatachannelEvent>(Channel.UNLIMITED)
-    private val outgoing = Channel<Any>(Channel.UNLIMITED)
     private val _state = MutableStateFlow(RTCDataChannelState.Connecting)
     private val _textMessages = MutableSharedFlow<String>(0, 64, BufferOverflow.SUSPEND)
     private val _binaryMessages = MutableSharedFlow<ByteArray>(0, 64, BufferOverflow.SUSPEND)
@@ -46,7 +45,6 @@ public class RTCDataChannel internal constructor(
     private var cleanedUp = false
     private val selfRef = StableRef.create(this)
 
-
     public val protocol: String
         get() = if (isClosed) "" else memScoped {
             val buf = allocArray<ByteVar>(256)
@@ -58,11 +56,6 @@ public class RTCDataChannel internal constructor(
     public val isClosed: Boolean get() = _state.value == RTCDataChannelState.Closed
     public val availableAmount: Int
         get() = if (isClosed) 0 else rtcGetAvailableAmount(dc).coerceAtLeast(0)
-
-    /**
-     * Async sending api
-     */
-    public val async: AsyncDataChannel = AsyncDataChannel()
 
     init {
         rtcSetUserPointer(dc, selfRef.asCPointer())
@@ -79,18 +72,6 @@ public class RTCDataChannel internal constructor(
         }
         _bufferedAmount.value = rtcGetBufferedAmount(dc).toLong()
         scope.launch { consumeNativeEvents() }
-        scope.launch { consumeOutgoingMessages() }
-    }
-
-    private suspend fun consumeOutgoingMessages() {
-        for (msg in outgoing) {
-            state.first { it == RTCDataChannelState.Open || it == RTCDataChannelState.Closed }
-            if (isClosed) break
-            when (msg) {
-                is ByteArray -> if (msg.isNotEmpty()) msg.usePinned { rtcSendMessage(dc, it.addressOf(0), msg.size) }
-                is String -> memScoped { rtcSendMessage(dc, msg.cstr.ptr, -1) }
-            }
-        }
     }
 
     private suspend fun consumeNativeEvents() {
@@ -167,28 +148,22 @@ public class RTCDataChannel internal constructor(
         rtcSetBufferedAmountLowThreshold(dc, threshold)
     }
 
-    /**
-     * Sending a [String] when channel is opened
-     */
-    public fun send(text: String): Unit = run { outgoing.trySend(text) }
+    public fun send(text: String) {
+        if (isClosed) return
+        memScoped { rtcSendMessage(dc, text.cstr.ptr, -1) }
+        _bufferedAmount.value = rtcGetBufferedAmount(dc).toLong()
+    }
 
-    /**
-     * Sending a [ByteArray] when channel is opened
-     */
-    public fun send(data: ByteArray): Unit = run { outgoing.trySend(data) }
+    public fun send(data: ByteArray) {
+        if (isClosed || data.isEmpty()) return
+        data.usePinned { pinned -> rtcSendMessage(dc, pinned.addressOf(0), data.size) }
+        _bufferedAmount.value = rtcGetBufferedAmount(dc).toLong()
+    }
 
     public fun close() {
         if (isClosed) return
         _state.value = RTCDataChannelState.Closing
         rtcClose(dc)
-    }
-
-    /**
-     * Async api for sending [String] or [ByteArray], unordered.
-     */
-    public inner class AsyncDataChannel internal constructor() {
-        public fun send(text: String): Job = scope.launch { this@RTCDataChannel.send(text) }
-        public fun send(data: ByteArray): Job = scope.launch { this@RTCDataChannel.send(data) }
     }
 
     public inner class MessageFlow internal constructor() {
@@ -220,11 +195,12 @@ public class RTCDataChannel internal constructor(
         private val messageCallback =
             staticCFunction<Int, CPointer<ByteVar>?, Int, COpaquePointer?, Unit> { _, msg, size, user ->
                 val self = user?.asStableRef<RTCDataChannel>()?.get() ?: return@staticCFunction
-                if (size > 0) self.nativeEvents.trySend(
-                    NativeDatachannelEvent.BinaryMessage(
-                        msg?.readBytes(size) ?: ByteArray(0)
-                    )
-                ) else self.nativeEvents.trySend(NativeDatachannelEvent.TextMessage(msg?.toKString() ?: ""))
+                if (size > 0 && msg != null) {
+                    val bytes = ByteArray(size)
+                    // Do NOT use readBytes!!!
+                    bytes.usePinned { pinned -> memcpy(pinned.addressOf(0), msg, size.convert()) }
+                    self.nativeEvents.trySend(NativeDatachannelEvent.BinaryMessage(bytes))
+                } else self.nativeEvents.trySend(NativeDatachannelEvent.TextMessage(msg?.toKString() ?: ""))
             }
 
         private val bufferedAmountLowCallback =

@@ -136,7 +136,6 @@ class TestRTCNoACK {
             .onEach {
                 delay(500.milliseconds)
                 dcA.send("hello from A")
-                dcA.async.send("")
             }.launchIn(scope)
 
         println("[$label] A creating offer")

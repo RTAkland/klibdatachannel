@@ -6,6 +6,7 @@ repositories {
 
 kotlin {
     linuxX64()
+    linuxArm64()
 
     explicitApi()
     withSourcesJar()

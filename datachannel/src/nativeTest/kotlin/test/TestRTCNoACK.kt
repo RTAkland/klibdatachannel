@@ -100,7 +100,7 @@ class TestRTCNoACK {
         pcB.connectionState.onEach { println("[$label][B] state = $it") }.launchIn(scope)
         sigB.remoteDescriptions.onEach { sd ->
             pcB.setRemoteDescription(sd.sdp, sd.type)
-            if (sd.type == "offer") pcB.createAnswer()
+            pcB.createAnswer()
         }.launchIn(scope)
 
         sigB.remoteCandidates.onEach { pcB.addRemoteCandidate(it) }.launchIn(scope)
@@ -130,8 +130,7 @@ class TestRTCNoACK {
             gotAtA.complete(Unit)
         }.launchIn(scope)
 
-        dcA.state
-            .filter { it == RTCDataChannelState.Open }
+        dcA.state.filter { it == RTCDataChannelState.Open }
             .onEach {
                 delay(500.milliseconds)
                 dcA.send("hello from A")

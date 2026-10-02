@@ -1,30 +1,12 @@
 # kotlin-webrtc
 
-A Kotlin native [libdatachannel](https://github.com/paullouisageneau/libdatachannel) wrapper,
-only datachannel, supports `linuxX64`
+A Kotlin native WebRTC DataChannel wrapper
+of [libdatachannel](https://github.com/paullouisageneau/libdatachannel) based on kotlin cinterop
 
-# Example
+# Document
 
-## Use as dependencies
-
-```kotlin
-repositories { 
-    maven("https://repo.rtast.cn/packages/")
-}
-
-kotlin {
-    sourceSets {
-        commonMain.dependencies {
-            implementation("cn.rtast.webrtc:datachannel:<version>")
-        }
-    }
-}
-```
-
-> Latest version https://repo.rtast.cn/packages/-/cn.rtast.webrtc:datachannel/
-
-[TestRTCNoACK](datachannel/src/nativeTest/kotlin/test/TestRTCNoACK.kt), it uses an in-process signaling server
+[Basic Usage](docs/README.md)
 
 # Open Source
 
-kotlin-webrtc open source under [Apache-2.0](LICENSE)
+`kotlin-webrtc` is open source under [Apache-2.0](LICENSE)

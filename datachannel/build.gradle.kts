@@ -1,9 +1,3 @@
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-
-repositories {
-    mavenLocal()
-}
-
 kotlin {
     linuxX64()
     linuxArm64()
@@ -11,20 +5,11 @@ kotlin {
     explicitApi()
     withSourcesJar()
 
-    targets.withType<KotlinNativeTarget>().configureEach {
-        compilations["main"].cinterops {
-            create("libdatachannel") {
-                definitionFile.set(file("src/cinterop/libdatachannel.def"))
-                extraOpts("-libraryPath", file("src/cinterop/libs/${this@configureEach.name}").absolutePath)
-                includeDirs(file("src/cinterop/include/libdatachannel/include"))
-            }
-        }
-    }
-
     sourceSets {
         commonMain.dependencies {
             api(libs.coroutines)
             implementation(project(":mbedtls"))
+            implementation(project(":libdatachannel"))
         }
 
         commonTest.dependencies {

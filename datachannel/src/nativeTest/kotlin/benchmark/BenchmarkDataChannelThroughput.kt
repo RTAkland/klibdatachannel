@@ -20,8 +20,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
-import libdatachannel.rtcSctpSettings
-import libdatachannel.rtcSetSctpSettings
 import platform.posix.*
 import test.LoopbackSignaling
 import kotlin.concurrent.Volatile
@@ -49,19 +47,10 @@ class BenchmarkDataChannelFileTransfer {
     @Volatile
     private var recvBytes: Long = 0L
 
+    private val factory = RTCPeerConnectionFactory(RTCLogLevel.DISABLED)
+
     @Test
     fun benchmarkFileTransfer() = runBlocking {
-        RTCPeerConnectionFactory.init(RTCLogLevel.DISABLED)
-        memScoped {
-            val settings = alloc<rtcSctpSettings>()
-            settings.recvBufferSize = 16 * 1024 * 1024
-            settings.sendBufferSize = 16 * 1024 * 1024
-            settings.maxChunksOnQueue = 4096
-            settings.initialCongestionWindow = 64
-            settings.maxBurst = 32
-            rtcSetSctpSettings(settings.ptr)
-        }
-
         val existing = fileSize(srcPath)
         check(existing == totalBytes) {
             "source file $srcPath size=$existing, expected=$totalBytes"
@@ -74,7 +63,7 @@ class BenchmarkDataChannelFileTransfer {
             runSingle(rootScope)
         } finally {
             rootScope.cancel()
-            RTCPeerConnectionFactory.cleanup()
+            factory.cleanup()
         }
     }
 
@@ -87,8 +76,8 @@ class BenchmarkDataChannelFileTransfer {
             sigB.peer = sigA
 
             val config = rtcConfiguration {}
-            val pcA = RTCPeerConnectionFactory.createPeerConnection(runScope, config)
-            val pcB = RTCPeerConnectionFactory.createPeerConnection(runScope, config)
+            val pcA = factory.createPeerConnection(runScope, config)
+            val pcB = factory.createPeerConnection(runScope, config)
 
             pcA.localDescriptions.onEach { sigA.sendSdp(it) }.launchIn(runScope)
             pcA.localCandidates.onEach { sigA.sendCandidate(it) }.launchIn(runScope)

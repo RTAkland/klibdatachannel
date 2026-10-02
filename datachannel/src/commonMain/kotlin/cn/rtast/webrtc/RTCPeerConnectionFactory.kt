@@ -15,19 +15,25 @@ import cn.rtast.webrtc.configuration.RTCLogLevel
 import cn.rtast.webrtc.configuration.rtcConfiguration
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.IO
+import libdatachannel.LIBDATACHANNEL_VERSION
 import libdatachannel.rtcCleanup
 import libdatachannel.rtcInitLogger
 import libdatachannel.rtcPreload
+import kotlin.concurrent.Volatile
 
-public object RTCPeerConnectionFactory {
-    private var initialized = false
-    internal var errorHandler: ((RTCException) -> Unit)? = null
-
-    public fun init(logLevel: RTCLogLevel = RTCLogLevel.ERROR) {
-        if (initialized) return
-        rtcInitLogger(logLevel.logLevel, null)
-        rtcPreload()
-        initialized = true
+/**
+ * WebRTC init factory, should use it globally.
+ * @param logLevel libdatachannel defined log level
+ * @param scope A coroutine scope, an [IO] dispatcher is recommended
+ */
+public class RTCPeerConnectionFactory(private val logLevel: RTCLogLevel) {
+    init {
+        if (!initialized) {
+            rtcInitLogger(logLevel.logLevel, null)
+            rtcPreload()
+            initialized = true
+        }
     }
 
     public fun cleanup() {
@@ -36,13 +42,10 @@ public object RTCPeerConnectionFactory {
         initialized = false
     }
 
-    public fun createPeerConnection(scope: CoroutineScope, config: RTCConfiguration): RTCPeerConnection {
-        check(initialized) { "Call WebRTC.init() first" }
-        return RTCPeerConnection(scope, config)
-    }
-
-    public fun createPeerConnection(scope: CoroutineScope): RTCPeerConnection =
-        createPeerConnection(scope, rtcConfiguration {})
+    public fun createPeerConnection(
+        scope: CoroutineScope,
+        config: RTCConfiguration = rtcConfiguration {},
+    ): RTCPeerConnection = check(initialized) { "Call WebRTC.init() first" }.let { RTCPeerConnection(scope, config) }
 
     public fun createPeerConnection(
         scope: CoroutineScope,
@@ -51,5 +54,14 @@ public object RTCPeerConnectionFactory {
 
     public fun onError(handler: (RTCException) -> Unit) {
         errorHandler = handler
+    }
+
+    public companion object {
+        public const val VERSION: String = LIBDATACHANNEL_VERSION
+
+        private var initialized = false
+
+        @Volatile
+        internal var errorHandler: ((RTCException) -> Unit)? = null
     }
 }

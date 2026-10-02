@@ -25,7 +25,7 @@ public class RTCDataChannel internal constructor(
     private val dc: Int,
     public val label: String,
     private val peer: RTCPeerConnection,
-    private val scope: CoroutineScope,
+    scope: CoroutineScope,
 ) {
     private val nativeEvents = Channel<NativeDatachannelEvent>(Channel.UNLIMITED)
     private val _state = MutableStateFlow(RTCDataChannelState.Connecting)

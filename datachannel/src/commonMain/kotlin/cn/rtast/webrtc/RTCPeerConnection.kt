@@ -26,9 +26,14 @@ import libdatachannel.*
 import platform.posix.memset
 import kotlin.concurrent.Volatile
 
+/**
+ * A wrapper around a native libdatachannel peerconnection
+ *
+ * @param parentScope scope whose Job becomes the parent of [pcScope]
+ * @param iceConfig ICE/transport configuration
+ */
 public class RTCPeerConnection internal constructor(parentScope: CoroutineScope, iceConfig: RTCConfiguration) {
     public constructor(scope: CoroutineScope) : this(scope, rtcConfiguration {})
-
     private var pc: Int = -1
     private var selfRef: StableRef<RTCPeerConnection>? = null
 
@@ -138,7 +143,10 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
         }
     }
 
-    public fun selectedConnectionMode(): RTCIceTransportType {
+    /**
+     * Derives the transport type (host/srflx/relay) from the selected pair
+     */
+    public fun selectedIceTransportType(): RTCIceTransportType {
         val pair = _selectedCandidatePair.value ?: return RTCIceTransportType.UNKNOWN
         val localIsRelay = pair.local.contains("typ relay")
         val remoteIsRelay = pair.remote.contains("typ relay")
@@ -222,15 +230,16 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
         }
     }
 
+    /**
+     * Creates an initiated datachannel with configuration
+     */
     public fun createDataChannel(
         label: String,
         protocol: String,
         config: RTCDataChannelConfig = RTCDataChannelConfig.Reliable,
     ): RTCDataChannel {
         check(pc >= 0) { "PeerConnection closed" }
-
         val effectiveProtocol = config.protocol.ifEmpty { protocol }
-
         val dcId = memScoped {
             val init = alloc<rtcDataChannelInit>()
             memset(init.ptr, 0, sizeOf<rtcDataChannelInit>().convert())
@@ -253,9 +262,15 @@ public class RTCPeerConnection internal constructor(parentScope: CoroutineScope,
         return ch
     }
 
+    /**
+     * Creates a reliable, ordered datachannel
+     */
     public fun createDataChannel(label: String): RTCDataChannel =
         createDataChannel(label, "", RTCDataChannelConfig.Reliable)
 
+    /**
+     * Creates a datachannel with an explicit config
+     */
     public fun createDataChannel(label: String, config: RTCDataChannelConfig): RTCDataChannel =
         createDataChannel(label, "", config)
 

@@ -23,10 +23,11 @@ class TestRTCNoACK {
     private val testTurnUser = "053ab4513c7fbb2523e627d4"
     private val testTurnPass = "P2bVZlYXTzmzsu4V"
 
+    private val factory = RTCPeerConnectionFactory(RTCLogLevel.ERROR)
+
     @Test
     fun testStunOnly() = runBlocking {
-        RTCPeerConnectionFactory.init(RTCLogLevel.ERROR)
-        RTCPeerConnectionFactory.onError {
+        factory.onError {
             println(it)
         }
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -39,13 +40,12 @@ class TestRTCNoACK {
             runScenario(scope, "STUN-only", config)
         } finally {
             scope.cancel()
-            RTCPeerConnectionFactory.cleanup()
+            factory.cleanup()
         }
     }
 
     @Test
     fun testStunAndTurn() = runBlocking {
-        RTCPeerConnectionFactory.init(RTCLogLevel.ERROR)
         val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
         val config = rtcConfiguration {
             stun(publicStun)
@@ -58,13 +58,12 @@ class TestRTCNoACK {
             runScenario(scope, "STUN+TURN(ALL)", config)
         } finally {
             scope.cancel()
-            RTCPeerConnectionFactory.cleanup()
+            factory.cleanup()
         }
     }
 
     @Test
     fun testTurnRelayOnly() = runBlocking {
-        RTCPeerConnectionFactory.init(RTCLogLevel.ERROR)
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val config = rtcConfiguration {
             turn(testTurnHost, 80, testTurnUser, testTurnPass, RTCTransport.UDP)
@@ -76,7 +75,7 @@ class TestRTCNoACK {
             runScenario(scope, "TURN-RELAY", config)
         } finally {
             scope.cancel()
-            RTCPeerConnectionFactory.cleanup()
+            factory.cleanup()
         }
     }
 
@@ -86,8 +85,8 @@ class TestRTCNoACK {
         sigA.peer = sigB
         sigB.peer = sigA
 
-        val pcA = RTCPeerConnectionFactory.createPeerConnection(scope, config)
-        val pcB = RTCPeerConnectionFactory.createPeerConnection(scope, config)
+        val pcA = factory.createPeerConnection(scope, config)
+        val pcB = factory.createPeerConnection(scope, config)
 
         val gotAtA = CompletableDeferred<Unit>()
         val gotAtB = CompletableDeferred<Unit>()
@@ -108,7 +107,7 @@ class TestRTCNoACK {
         pcB.incomingDataChannels.onEach { dc ->
             println(
                 "[$label][B] incoming channel: ${dc.label}, " +
-                        "mode = ${pcB.selectedConnectionMode()}"
+                        "mode = ${pcB.selectedIceTransportType()}"
             )
             dc.messages.text.onEach { msg ->
                 println("[$label][B] recv text: $msg")

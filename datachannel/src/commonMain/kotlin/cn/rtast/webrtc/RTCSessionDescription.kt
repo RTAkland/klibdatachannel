@@ -7,4 +7,7 @@
 
 package cn.rtast.webrtc
 
-public data class RTCSessionDescription(val type: String, val sdp: String)
+public data class RTCSessionDescription(
+    val type: String,
+    val sdp: String,
+)

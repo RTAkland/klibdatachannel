@@ -11,7 +11,6 @@ package cn.rtast.webrtc.configuration
  * ICE transport policy that controls which candidate
  * types the ICE agent gathers and uses for connectivity checks
  */
-public enum class RTCIceTransportPolicy(public val value: UInt) {
-    ALL(0u),
-    RELAY(1u);
+public enum class RTCIceTransportPolicy {
+    ALL, RELAY
 }

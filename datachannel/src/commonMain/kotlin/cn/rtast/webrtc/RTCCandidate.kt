@@ -7,4 +7,7 @@
 
 package cn.rtast.webrtc
 
-public data class RTCCandidate(public val candidate: String, public val mid: String)
+public data class RTCCandidate(
+    public val candidate: String,
+    public val mid: String,
+)

@@ -8,11 +8,15 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(libs.coroutines)
+        }
+
+        nativeMain.dependencies {
             implementation(project(":mbedtls"))
             implementation(project(":libdatachannel"))
         }
 
-        commonTest.dependencies {
-        }
+        commonTest.dependencies {}
     }
+
+    compilerOptions.freeCompilerArgs.addAll("-Xexpect-actual-classes")
 }

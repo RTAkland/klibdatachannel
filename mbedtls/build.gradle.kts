@@ -13,21 +13,10 @@ kotlin {
 
     targets.withType<KotlinNativeTarget>().configureEach {
         compilations["main"].cinterops {
-            create("libdatachannel") {
-                definitionFile.set(file("src/cinterop/libdatachannel.def"))
+            create("mbedtls") {
+                definitionFile.set(file("src/cinterop/mbedtls.def"))
                 extraOpts("-libraryPath", file("src/cinterop/libs/${this@configureEach.name}").absolutePath)
-                includeDirs(file("src/cinterop/include/libdatachannel/include"))
             }
-        }
-    }
-
-    sourceSets {
-        commonMain.dependencies {
-            api(libs.coroutines)
-            implementation(project(":mbedtls"))
-        }
-
-        commonTest.dependencies {
         }
     }
 }

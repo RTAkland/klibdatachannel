@@ -7,7 +7,9 @@
 package test
 
 import cn.rtast.webrtc.RTCPeerConnectionFactory
+import cn.rtast.webrtc.VERSION
 import cn.rtast.webrtc.configuration.*
+import cn.rtast.webrtc.createDataChannel
 import cn.rtast.webrtc.state.RTCDataChannelState
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filter
@@ -23,7 +25,15 @@ class TestRTCNoACK {
     private val testTurnUser = "053ab4513c7fbb2523e627d4"
     private val testTurnPass = "P2bVZlYXTzmzsu4V"
 
+    private val testLANTurnHost = "192.168.10.200"
+    private val testLANTurnUser = "testuser"
+    private val testLANTurnPass = "testpass"
+
     private val factory = RTCPeerConnectionFactory(RTCLogLevel.ERROR)
+
+    init {
+        println(RTCPeerConnectionFactory.VERSION)
+    }
 
     @Test
     fun testStunOnly() = runBlocking {
@@ -40,7 +50,7 @@ class TestRTCNoACK {
             runScenario(scope, "STUN-only", config)
         } finally {
             scope.cancel()
-            factory.cleanup()
+            factory.close()
         }
     }
 
@@ -58,7 +68,7 @@ class TestRTCNoACK {
             runScenario(scope, "STUN+TURN(ALL)", config)
         } finally {
             scope.cancel()
-            factory.cleanup()
+            factory.close()
         }
     }
 
@@ -66,8 +76,10 @@ class TestRTCNoACK {
     fun testTurnRelayOnly() = runBlocking {
         val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
         val config = rtcConfiguration {
-            turn(testTurnHost, 80, testTurnUser, testTurnPass, RTCTransport.UDP)
-            turn(testTurnHost, 443, testTurnUser, testTurnPass, RTCTransport.TCP)
+//            turn(testTurnHost, 80, testTurnUser, testTurnPass, RTCTransport.UDP)
+//            turn(testTurnHost, 443, testTurnUser, testTurnPass, RTCTransport.TCP)
+            turn(testLANTurnHost, 3478, testLANTurnUser, testLANTurnPass, RTCTransport.UDP)
+            turn(testLANTurnHost, 3478, testLANTurnUser, testLANTurnPass, RTCTransport.TCP)
             iceTransportPolicy = RTCIceTransportPolicy.RELAY
             disableAutoNegotiation = true
         }
@@ -75,7 +87,7 @@ class TestRTCNoACK {
             runScenario(scope, "TURN-RELAY", config)
         } finally {
             scope.cancel()
-            factory.cleanup()
+            factory.close()
         }
     }
 

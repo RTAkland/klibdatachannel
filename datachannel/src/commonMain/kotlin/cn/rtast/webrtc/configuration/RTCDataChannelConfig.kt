@@ -35,13 +35,12 @@ public class RTCDataChannelConfig internal constructor(
         }
     }
 
-    public companion object {
+    companion {
         /**
          * Default reliable, ordered channel
          */
-        public val Reliable: RTCDataChannelConfig = RTCDataChannelConfig(
-            true, null, null, "", false
-        )
+        @Suppress("PropertyName")
+        public val Reliable: RTCDataChannelConfig = RTCDataChannelConfig(true, null, null, "", false)
     }
 }
 

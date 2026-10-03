@@ -7,9 +7,9 @@
 
 package cn.rtast.webrtc
 
-public data class RTCException(
+public class RTCException(
     override val message: String,
-    val fatal: Boolean,
+    public val fatal: Boolean,
     override val cause: Throwable?,
 ) : RuntimeException(message, cause) {
     public constructor(message: String, fatal: Boolean) : this(message, fatal, null)

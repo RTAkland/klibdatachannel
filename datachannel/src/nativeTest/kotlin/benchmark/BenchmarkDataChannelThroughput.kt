@@ -10,8 +10,10 @@
 package benchmark
 
 import cn.rtast.webrtc.RTCPeerConnectionFactory
+import cn.rtast.webrtc.configuration.RTCIceTransportPolicy
 import cn.rtast.webrtc.configuration.RTCLogLevel
 import cn.rtast.webrtc.configuration.rtcConfiguration
+import cn.rtast.webrtc.createDataChannel
 import cn.rtast.webrtc.state.RTCDataChannelState
 import kotlinx.cinterop.*
 import kotlinx.coroutines.*
@@ -38,7 +40,7 @@ class BenchmarkDataChannelFileTransfer {
     private val backpressureLimit = 8L * 1024 * 1024
     private val progressInterval = 100.milliseconds
 
-    private val srcPath = "/dev/shm/webrtc-bench-src.bin"
+    private val srcPath = "/home/rtakland/Downloads/imager_2.0.11.1_amd64.AppImage"
     private val dstPath = "/tmp/12312313213412413"
 
     @Volatile
@@ -63,7 +65,7 @@ class BenchmarkDataChannelFileTransfer {
             runSingle(rootScope)
         } finally {
             rootScope.cancel()
-            factory.cleanup()
+            factory.close()
         }
     }
 
@@ -75,7 +77,10 @@ class BenchmarkDataChannelFileTransfer {
             sigA.peer = sigB
             sigB.peer = sigA
 
-            val config = rtcConfiguration {}
+            val config = rtcConfiguration {
+                turn("192.168.10.200", 3478, "testuser", "testpass")
+                iceTransportPolicy = RTCIceTransportPolicy.RELAY
+            }
             val pcA = factory.createPeerConnection(runScope, config)
             val pcB = factory.createPeerConnection(runScope, config)
 

@@ -14,7 +14,6 @@ import cn.rtast.webrtc.configuration.rtcConfiguration
 import kotlinx.coroutines.CoroutineScope
 
 public expect class RTCPeerConnectionFactory(logLevel: RTCLogLevel) {
-    public fun cleanup()
     public fun createPeerConnection(
         scope: CoroutineScope,
         config: RTCConfiguration = rtcConfiguration {},
@@ -26,6 +25,12 @@ public expect class RTCPeerConnectionFactory(logLevel: RTCLogLevel) {
     ): RTCPeerConnection
 
     public fun onError(handler: (RTCException) -> Unit)
+
+    public fun close()
+
+    companion {
+        internal var errorHandler: ((RTCException) -> Unit)?
+    }
 }
 
-public expect val RTCPeerConnectionFactory.VERSION: String
+public expect companion val RTCPeerConnectionFactory.VERSION: String

@@ -12,5 +12,14 @@ package cn.rtast.webrtc.configuration
  * types the ICE agent gathers and uses for connectivity checks
  */
 public enum class RTCIceTransportPolicy {
-    ALL, RELAY
+    /**
+     * Traffic forwarded through relay server
+     * when direct/p2p connection failed.
+     */
+    ALL,
+
+    /**
+     * Disable direct/p2p connections and force relaying
+     */
+    RELAY
 }

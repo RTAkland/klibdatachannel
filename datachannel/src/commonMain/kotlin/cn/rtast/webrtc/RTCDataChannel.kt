@@ -7,6 +7,7 @@
 package cn.rtast.webrtc
 
 import cn.rtast.webrtc.state.RTCDataChannelState
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -15,7 +16,7 @@ public expect class RTCDataChannel {
     public val protocol: String
     public val state: StateFlow<RTCDataChannelState>
     public val bufferedAmount: StateFlow<Long>
-    public val bufferedAmountLow: SharedFlow<Unit>
+    public val bufferedAmountLow: Flow<Unit>
     public val isOpen: Boolean
     public val isClosed: Boolean
     public val availableAmount: Int
@@ -27,10 +28,10 @@ public expect class RTCDataChannel {
         public val bytes: SharedFlow<ByteArray>
     }
 
-    public fun send(text: String)
-    public fun send(data: ByteArray)
-    public fun close()
-    public fun setBufferedAmountLowThreshold(threshold: Int)
+    public fun send(text: String): Boolean
+    public fun send(data: ByteArray): Boolean
+    public fun close(): Boolean
+    public fun setBufferedAmountLowThreshold(threshold: Int): Boolean
 
 }
 

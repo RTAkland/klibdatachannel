@@ -8,11 +8,7 @@
 
 package cn.rtast.webrtc
 
-import cn.rtast.webrtc.configuration.RTCConfiguration
-import cn.rtast.webrtc.configuration.RTCConfigurationBuilder
-import cn.rtast.webrtc.configuration.RTCLogLevel
-import cn.rtast.webrtc.configuration.rtcConfiguration
-import cn.rtast.webrtc.configuration.toNative
+import cn.rtast.webrtc.configuration.*
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import libdatachannel.LIBDATACHANNEL_VERSION
@@ -35,14 +31,14 @@ public actual class RTCPeerConnectionFactory actual constructor(logLevel: RTCLog
         errorHandler = handler
     }
 
-    public actual fun cleanup() {
+    public actual fun close() {
         if (!initialized) return
         rtcCleanup()
         initialized = false
     }
 
-    public companion object {
-        internal var errorHandler: ((RTCException) -> Unit)? = null
+    companion {
+        internal actual var errorHandler: ((RTCException) -> Unit)? = null
         private var initialized = false
     }
 
@@ -55,5 +51,4 @@ public actual class RTCPeerConnectionFactory actual constructor(logLevel: RTCLog
     }
 }
 
-public actual val RTCPeerConnectionFactory.VERSION: String
-    get() = LIBDATACHANNEL_VERSION
+public actual companion val RTCPeerConnectionFactory.VERSION: String = LIBDATACHANNEL_VERSION
